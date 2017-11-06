@@ -9,13 +9,13 @@ In this exercise you need to know how to set joint commands.
 
 '''
 
-from spark_agent import SparkAgent
+from introduction.spark_agent import SparkAgent
 
 
 class MyAgent(SparkAgent):
     def think(self, perception):
         action = super(MyAgent, self).think(perception)
-        # YOUR CODE HERE #TODO test if it wörks
+        # YOUR CODE HERE
         action.stiffness['LShoulderPitch'] = 0
         action.speed['HeadYaw'] = 0.1
 
