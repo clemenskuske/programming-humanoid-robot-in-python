@@ -120,5 +120,5 @@ class AngleInterpolationAgent(PIDAgent):
 
 if __name__ == '__main__':
     agent = AngleInterpolationAgent()
-    agent.keyframes = rightBellyToStand(w) #  # CHANGE DIFFERENT KEYFRAMES
+    agent.keyframes = rightBellyToStand() #  # CHANGE DIFFERENT KEYFRAMES
     agent.run()
