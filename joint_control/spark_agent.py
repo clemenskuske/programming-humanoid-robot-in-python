@@ -6,7 +6,7 @@ import struct
 from math import pi, atan2, asin, cos, sin
 from threading import Thread
 
-from software_installation.sexpr import str2sexpr
+from sexpr import str2sexpr
 
 DEG_TO_RAD = pi / 180
 
