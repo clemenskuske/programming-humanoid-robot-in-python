@@ -20,8 +20,8 @@
 '''
 
 import numpy as np
-from pid import PIDAgent
-from keyframes import *
+from joint_control.pid import PIDAgent
+from joint_control.keyframes import *
 
 
 class AngleInterpolationAgent(PIDAgent):

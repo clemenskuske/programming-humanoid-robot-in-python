@@ -20,8 +20,10 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
 
-from numpy.matlib import matrix, identity
-
+from numpy.matlib import matrix, identity, dot, transpose, array
+from numpy.linalg import norm
+import numpy as np
+import math as math
 from angle_interpolation import AngleInterpolationAgent
 
 
@@ -35,9 +37,40 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         self.transforms = {n: identity(4) for n in self.joint_names}
 
         # chains defines the name of chain and joints of the chain
-        self.chains = {'Head': ['HeadYaw', 'HeadPitch']
-                       # YOUR CODE HERE
+        self.chains = {'Head': ['HeadYaw', 'HeadPitch'],
+                       'LArm': ['LShoulderPitch', 'LShoulderRoll', 'LElbowYaw', 'LElbowRoll'],
+                       'RArm': ['RShoulderPitch', 'RShoulderRoll', 'RElbowYaw', 'RElbowRoll'],
+                       'LLeg': ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'LAnklePitch', 'LAnkleRoll'],
+                       'RLeg': ['RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch', 'RAnklePitch', 'RAnkleRoll']
                        }
+
+        self.offsets = {'HeadYaw': [0, 0, 126.5],
+                        'HeadPitch': [0, 0, 0],
+
+                        'LShoulderPitch': [0, 98, 100],
+                        'LShoulderRoll': [0, 0, 0],
+                        'LElbowYaw': [105, 15, 0],
+                        'LElbowRoll': [0, 0, 0],
+
+                        'RShoulderPitch': [0, -98, 100],
+                        'RShoulderRoll': [0, 0, 0],
+                        'RElbowYaw': [105, -15, 0],
+                        'RElbowRoll': [0, 0, 0],
+
+                        'LHipYawPitch': [0, 50, -85],
+                        'LHipRoll': [0, 0, 0],
+                        'LHipPitch': [0, 0, 0],
+                        'LKneePitch': [0, 0, -100],
+                        'LAnklePitch': [0, 0, -102.9],
+                        'LAnkleRoll': [0, 0, 0],
+
+                        'RHipYawPitch': [0, -50, -85],
+                        'RHipRoll': [0, 0, 0],
+                        'RHipPitch': [0, 0, 0],
+                        'RKneePitch': [0, 0, -100],
+                        'RAnklePitch': [0, 0, -102.9],
+                        'RAnkleRoll': [0, 0, 0],
+                        }
 
     def think(self, perception):
         self.forward_kinematics(perception.joint)
@@ -51,24 +84,51 @@ class ForwardKinematicsAgent(AngleInterpolationAgent):
         :return: transformation
         :rtype: 4x4 matrix
         '''
-        T = identity(4)
-        # YOUR CODE HERE
 
-        return T
+        _joint_name = joint_name.replace("ElbowYaw", "TmpEl")\
+            .replace("ElbowRoll", "ElbowYaw")\
+            .replace("TmpEl", "ElbowRoll")\
+            .replace("ShoulderRoll", "ShoulderYaw")
+
+        if "LHipYawPitch" in joint_name:
+            return self.calculate_matrix(joint_angle, array([0,1,-1]), self.offsets[joint_name])
+        if "RHipYawPitch" in joint_name:
+            return self.calculate_matrix(joint_angle, array([0,-1,-1]), self.offsets[joint_name])
+
+        if "Yaw" in _joint_name:
+            return self.calculate_matrix(joint_angle, array([0,0,1]), self.offsets[joint_name])
+        if "Roll" in _joint_name:
+            return self.calculate_matrix(joint_angle, array([1,0,0]), self.offsets[joint_name])
+        if "Pitch" in _joint_name:
+            return self.calculate_matrix(joint_angle, array([0,1,0]), self.offsets[joint_name])
+
+    def calculate_matrix(self, angle, u, transform = False):
+        x, y, z  = u / norm(u)
+        cos, sin = math.cos(angle), math.sin(angle)
+        if not transform:
+            return matrix(
+                [[x * x * (1 - cos) + cos, x * y * (1 - cos) - z * sin, x * z * (1 - cos) + y * sin],
+                 [y * x * (1 - cos) + z * sin, y * y * (1 - cos) + cos, y * z * (1 - cos) - x * sin],
+                 [z * x * (1 - cos) - y * sin, z * y * (1 - cos) + x * sin, z * z * (1 - cos) + cos]])
+
+        return matrix([[x * x * (1 - cos) + cos, x * y * (1 - cos) - z * sin, x * z * (1 - cos) + y * sin, transform[0]],
+                       [y * x * (1 - cos) + z * sin, y * y * (1 - cos) + cos, y * z * (1 - cos) - x * sin, transform[1]],
+                       [z * x * (1 - cos) - y * sin, z * y * (1 - cos) + x * sin, z * z * (1 - cos) + cos, transform[2]],
+                       [0, 0, 0, 1]])
+
 
     def forward_kinematics(self, joints):
         '''forward kinematics
 
         :param joints: {joint_name: joint_angle}
         '''
-        for chain_joints in self.chains.values():
-            T = identity(4)
-            for joint in chain_joints:
-                angle = joints[joint]
-                Tl = self.local_trans(joint, angle)
-                # YOUR CODE HERE
-
-                self.transforms[joint] = T
+        for chain_joints in self.chains.values():       #for all chains
+            T = identity(4)                             #compute the transformation matrix
+            for joint in chain_joints:                  #via all joints in the chain,
+                angle = joints[joint]                   #according to the given angle.
+                Tl = self.local_trans(joint, angle)     #First compute joint matrix,
+                T = dot(T, Tl)                          #then multiply it to the chained matrices
+                self.transforms[joint] = T              #and save it
 
 if __name__ == '__main__':
     agent = ForwardKinematicsAgent()
