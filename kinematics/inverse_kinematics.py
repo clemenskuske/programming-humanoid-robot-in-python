@@ -18,6 +18,7 @@ from math import cos, sin, atan2, pi, asin, sqrt, acos, asin
 
 
 class InverseKinematicsAgent(ForwardKinematicsAgent):
+
     def inverse_kinematics(self, effector_name, transform):
         '''solve the inverse kinematics
 
